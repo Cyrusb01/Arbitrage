@@ -1,3 +1,4 @@
 # Arbitrage
 
-Sockets.py contains the code which using asynch websockets to update google spreadsheet
+Sockets.py contains code to run asynchronous websockets to five crypto exchanges
+
