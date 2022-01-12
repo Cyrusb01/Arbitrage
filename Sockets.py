@@ -1,19 +1,20 @@
-from gspread.models import Worksheet
+# from gspread.models import Worksheet
 import websocket, json 
-import gspread 
-from oauth2client.service_account import ServiceAccountCredentials 
+# import gspread 
+# from oauth2client.service_account import ServiceAccountCredentials 
 import asyncio
 import websockets 
 import aiohttp
 import time
 
+
 #----------------------------------------------------------------Gspread-------------------------------------------------------------------------------------
 
-scope = ["https://spreadsheets.google.com/feeds",'https://www.googleapis.com/auth/spreadsheets',"https://www.googleapis.com/auth/drive.file","https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
-client = gspread.authorize(creds)
+# scope = ["https://spreadsheets.google.com/feeds",'https://www.googleapis.com/auth/spreadsheets',"https://www.googleapis.com/auth/drive.file","https://www.googleapis.com/auth/drive"]
+# creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+# client = gspread.authorize(creds)
 
-spreadsheet = client.open("arb matrix").sheet1
+# spreadsheet = client.open("arb matrix").sheet1
 
 
 #----------------------------------------------------------------Asynchronous ---------------------------------------------------------------------------------
@@ -36,12 +37,18 @@ async def handle_socket(uri, ):
     print("Started Socket:", uri)
 
     global latest_binance_price 
+    latest_binance_price = 0
     global latest_coinbase_price 
+    latest_coinbase_price = 0
     global latest_krakken_price 
+    latest_krakken_price = 0
     global latest_gemini_price 
+    latest_gemini_price = 0
     global latest_ftx_price 
+    latest_ftx_price = 0
 
     global coinbase_bid
+    
     global coinbase_ask
     global binance_bid
     global binance_ask
@@ -53,6 +60,7 @@ async def handle_socket(uri, ):
     global gemini_bid
     
     async with websockets.connect(uri) as websocket:
+        # print("-----------------------------------------------------------------")
         if (uri == 'wss://ws-feed.pro.coinbase.com'): #Subscribe to Coinbase
             subscribe_message = {
                 'type' : 'subscribe',
@@ -60,8 +68,10 @@ async def handle_socket(uri, ):
                         'product_ids' : ['BTC-USD'] }]
             }
             await websocket.send(json.dumps(subscribe_message))
+        
         if (uri == 'wss://ws.kraken.com/'): #Subscribe to Krakken
             await websocket.send('{"event":"subscribe", "subscription":{"name":"spread"}, "pair":["BTC/USD"]}')
+        
         if (uri == 'wss://ftx.com/ws/'): #Subscribe to FTX
             await websocket.send('{"op": "subscribe", "channel": "ticker", "market": "BTC/USD"}')
         
@@ -86,7 +96,6 @@ async def handle_socket(uri, ):
                             coinbase_ask = values[i]
                         counter += 1
                 
-
             if (uri == 'wss://stream.binance.com:9443/ws/btcusdt@bookTicker'):
                 message_dict = json.loads(message)
                 binance_bid = message_dict['b']
@@ -123,33 +132,51 @@ async def handle_socket(uri, ):
 
                     latest_ftx_price = ftx_ask
     
-            if (minute_passed(seconds)):
-                #print("Time Passed")
+            if True:
                 seconds = time.time()
+                if latest_binance_price != 0 and latest_coinbase_price != 0 and latest_krakken_price != 0 and latest_gemini_price != 0 and latest_ftx_price != 0:
 
-                if (uri == 'wss://ftx.com/ws/'):
+                    
+                    prices = {"Binance" : float(latest_binance_price), "Coinbase" : float(latest_coinbase_price), "Krakken" : float(latest_krakken_price), "Gemini" : float(latest_gemini_price),  "FTX" : float(latest_ftx_price)}
+                    # print(list(prices.items()))
+                    largest_diff = 0
+                    diff_exchanges = ""
+                    for key in prices.keys():
+                        # print(key, ":", prices[key])
+                        for key_ in prices.keys():
+                            # print(key, ":", prices[key])
+                            if ((prices[key] - prices[key_]) / prices[key_]) * 100 > largest_diff:
+                                largest_diff = ((prices[key] - prices[key_]) / prices[key_]) * 100
+                                diff_exchanges = key + "/" + key_
+
+
+
+
                     print("Binance Latest Price: ", latest_binance_price)
                     print("Coinbase Latest Price: ", latest_coinbase_price)
                     print("Krakken Latest Price: ", latest_krakken_price)
                     print("Gemini Latest Price: ", latest_gemini_price)
                     print("FTX Latest Price: ", latest_ftx_price)
+                    print("GREATEST OPPORTUNITY ", diff_exchanges, " : ", largest_diff, "%")
+
                     print("--------------------------------------------------")
+                    # return render_template("index.html", coin = latest_coinbase_price, bin = latest_binance_price, krak = latest_krakken_price, gem = latest_gemini_price, ftx = latest_ftx_price)
 
         
-                    spreadsheet.update_cell(2, 13, binance_bid)
-                    spreadsheet.update_cell(3, 13, latest_binance_price)
+                    # spreadsheet.update_cell(2, 13, binance_bid)
+                    # spreadsheet.update_cell(3, 13, latest_binance_price)
                   
-                    spreadsheet.update_cell(2, 11, coinbase_bid)
-                    spreadsheet.update_cell(3, 11, coinbase_ask)
+                    # spreadsheet.update_cell(2, 11, coinbase_bid)
+                    # spreadsheet.update_cell(3, 11, coinbase_ask)
                 
-                    spreadsheet.update_cell(2, 12, kraken_bid)
-                    spreadsheet.update_cell(3, 12, kraken_ask)
+                    # spreadsheet.update_cell(2, 12, kraken_bid)
+                    # spreadsheet.update_cell(3, 12, kraken_ask)
                 
-                    spreadsheet.update_cell(2, 14, gemini_bid)
-                    spreadsheet.update_cell(3, 14, gemini_ask)
+                    # spreadsheet.update_cell(2, 14, gemini_bid)
+                    # spreadsheet.update_cell(3, 14, gemini_ask)
     
-                    spreadsheet.update_cell(2, 15, ftx_bid)
-                    spreadsheet.update_cell(3, 15, ftx_ask)
+                    # spreadsheet.update_cell(2, 15, ftx_bid)
+                    # spreadsheet.update_cell(3, 15, ftx_ask)
 
                 # if(latest_binance_price != 0):
                 #     spreadsheet.update_cell(5, 2, latest_binance_price)
@@ -170,111 +197,8 @@ async def handle_socket(uri, ):
 
                 #print("Binance Latest Price: ", latest_binance_price)
                 
-                
-        
             
-
 async def handler():
     await asyncio.wait([handle_socket(uri) for uri in connections])
 
 asyncio.get_event_loop().run_until_complete(handler())
-
-# async def prices(url):
-#     async with websockets.connect(url) as websocket:
-#         #await websocket.send("Hello world!")
-#         mes  = await websocket.recv()
-#         print(mes)
-
-# async def forever():
-#     while True:
-#         await prices()
-
-
-# loop = asyncio.get_event_loop()
-# loop.run_until_complete(forever())
-
-# #----------------------------------------------------------------Gspread-------------------------------------------------------------------------------------
-
-# scope = ["https://spreadsheets.google.com/feeds",'https://www.googleapis.com/auth/spreadsheets',"https://www.googleapis.com/auth/drive.file","https://www.googleapis.com/auth/drive"]
-# creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
-# client = gspread.authorize(creds)
-
-# spreadsheet = client.open("arb matrix").sheet1
-
-
-
-# def on_close(ws):
-#     print("Closed")
-
-
-
-# #----------------------------------------------------------Binance ---------------------------------------------------------------------------------
-# socket = 'wss://stream.binance.com:9443/ws/btcusdt@kline_1m'
-
-# def on_open_binance(ws):
-#     print("Binance Socket Opened")
-
-# def on_message_binance(ws, message):
-#     message_dict = json.loads(message)
-#     candle = message_dict['k']
-#     close = candle['c']
-#     print(close)
-#     spreadsheet.update_cell(8, 2, close)
-#     spreadsheet.update_cell(2, 8, close)
-
-# ws_binance = websocket.WebSocketApp(socket, on_open = on_open_binance, on_message = on_message_binance, on_close = on_close)
-
-
-
-
-
-# #---------------------------------------------------Coinbase Pro --------------------------------------------------------------------------------------
-
-# socket = 'wss://ws-feed.pro.coinbase.com'
-
-# def on_open_coinbase_pro(ws):
-#     print("Coinbase Pro Socket Opened")
-#     subscribe_message = {
-#         'type' : 'subscribe',
-#         'channels' : [{'name' : 'ticker',
-#                         'product_ids' : ['BTC-USD'] }]
-#     }
-#     ws.send(json.dumps(subscribe_message))
-
-# def on_message_coinbase_pro(ws, message):
-#     message_dict = json.loads(message)
-#     close = message_dict['price']
-#     #print(close)
-#     spreadsheet.update_cell(4, 2, close)
-#     spreadsheet.update_cell(2, 4, close)
-
-# ws_coinbase_pro = websocket.WebSocketApp(socket, on_open = on_open_coinbase_pro, on_message = on_message_coinbase_pro, on_close = on_close)
-
-# #---------------------------------------------------Krakken--------------------------------------------------------------------------------------
-
-# socket = 'wss://ws-feed.pro.coinbase.com'
-
-# def on_open_coinbase_pro(ws):
-#     print("Coinbase Pro Socket Opened")
-#     subscribe_message = {
-#         'type' : 'subscribe',
-#         'channels' : [{'name' : 'ticker',
-#                         'product_ids' : ['BTC-USD'] }]
-#     }
-#     ws.send(json.dumps(subscribe_message))
-
-# def on_message_coinbase_pro(ws, message):
-#     message_dict = json.loads(message)
-#     close = message_dict['price']
-#     #print(close)
-#     spreadsheet.update_cell(4, 2, close)
-#     spreadsheet.update_cell(2, 4, close)
-
-# ws_coinbase_pro = websocket.WebSocketApp(socket, on_open = on_open_coinbase_pro, on_message = on_message_coinbase_pro, on_close = on_close)
-
-
-
-# ws_binance.run_forever()
-
-# ws_coinbase_pro.run_forever()
-
